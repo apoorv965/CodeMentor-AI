@@ -1,0 +1,10 @@
+{
+  "name": "codementor-ai-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Single-file frontend for CodeMentor-AI.",
+  "scripts": {
+    "start": "node serve.js",
+    "check": "node -e \"const fs=require('fs'); const html=fs.readFileSync('index.html','utf8'); fs.writeFileSync('/tmp/codementor-frontend-check.js',[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]).join('\\n'));\" && node --check /tmp/codementor-frontend-check.js"
+  }
+}

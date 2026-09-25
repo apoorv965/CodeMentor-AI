@@ -1,0 +1,43 @@
+name: CodeMentor CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: backend
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+      - name: Validate backend
+        run: npm run check
+        working-directory: backend
+      - name: Validate frontend
+        run: npm run check
+        working-directory: frontend
+      - name: Validate Render Blueprint
+        run: node -e "const fs=require('fs'); const text=fs.readFileSync('render.yaml','utf8'); for (const key of ['codementor-api','codementor-web','healthCheckPath','PERSISTENCE_MODE']) if (!text.includes(key)) throw new Error('Missing render.yaml key: '+key);"

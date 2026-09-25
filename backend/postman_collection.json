@@ -1,0 +1,218 @@
+{
+  "info": {
+    "name": "Online Multi-Language Compiler API",
+    "description": "Auth, code execution (Python/Java/C++), and saved-program/history endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000" },
+    { "key": "token", "value": "" },
+    { "key": "programId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Aman Sharma\",\n  \"email\": \"aman@example.com\",\n  \"password\": \"secret123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.token) pm.collectionVariables.set('token', data.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"aman@example.com\",\n  \"password\": \"secret123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/auth/profile"
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/auth/logout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Code Execution",
+      "item": [
+        {
+          "name": "Execute Python",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/api/execute",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"language\": \"python\",\n  \"code\": \"name = input()\\nprint('Hello, ' + name)\",\n  \"input\": \"World\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Execute C++",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/api/execute",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"language\": \"cpp\",\n  \"code\": \"#include <iostream>\\nusing namespace std;\\nint main(){ int a,b; cin>>a>>b; cout<<a+b; return 0; }\",\n  \"input\": \"3 5\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Execute Java",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/api/execute",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"language\": \"java\",\n  \"code\": \"import java.util.Scanner;\\npublic class Main {\\n  public static void main(String[] args) {\\n    Scanner sc = new Scanner(System.in);\\n    int n = sc.nextInt();\\n    System.out.println(n * n);\\n  }\\n}\",\n  \"input\": \"7\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Execute - Compilation Error Example",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/execute",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"language\": \"cpp\",\n  \"code\": \"#include <iostream>\\nint main(){ std::cout << \\\"missing semicolon\\\" }\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Execute - Infinite Loop (timeout demo)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/execute",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"language\": \"python\",\n  \"code\": \"while True:\\n    pass\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Programs",
+      "item": [
+        {
+          "name": "Save Program",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.program) pm.collectionVariables.set('programId', data.program._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/api/programs",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Sum of two numbers\",\n  \"language\": \"python\",\n  \"code\": \"a, b = map(int, input().split())\\nprint(a + b)\",\n  \"input\": \"2 3\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Saved Programs",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/programs/saved"
+          }
+        },
+        {
+          "name": "Get Execution History",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/programs/history?page=1&limit=20"
+          }
+        },
+        {
+          "name": "Update Program",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/api/programs/{{programId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Sum of two numbers (updated)\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Program",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/programs/{{programId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "request": { "method": "GET", "url": "{{baseUrl}}/health" }
+    }
+  ]
+}

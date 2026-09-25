@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: compiler_mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  backend:
+    build: .
+    container_name: compiler_backend
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    environment:
+      # Overrides .env so the backend talks to the 'mongo' service name
+      # instead of localhost when running under docker-compose.
+      - MONGO_URI=mongodb://mongo:27017/online_compiler
+    volumes:
+      # Lets the backend container launch sibling execution containers
+      # on the HOST's Docker engine (Docker-outside-of-Docker).
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Must match the host tmp path used by dockerExecutor.js (os.tmpdir())
+      # so bind-mounts of job folders resolve correctly on the host.
+      - /tmp:/tmp
+
+volumes:
+  mongo_data:

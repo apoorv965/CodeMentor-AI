@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Backend (Express)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/backend/src/server.js",
+      "envFile": "${workspaceFolder}/backend/.env",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Frontend (static server)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/frontend/serve.js",
+      "console": "integratedTerminal"
+    }
+  ],
+  "compounds": [
+    { "name": "Run everything", "configurations": ["Backend (Express)", "Frontend (static server)"] }
+  ]
+}

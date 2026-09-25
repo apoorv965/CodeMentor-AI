@@ -3,8 +3,8 @@ const { spawn } = require('child_process');
 const backendPort = String(process.env.BACKEND_PORT || 5001);
 const publicPort = String(process.env.PORT || 10000);
 
-function start(name, command, args, env) {
-  const child = spawn(command, args, { env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
+function start(name, command, args, env, cwd) {
+  const child = spawn(command, args, { cwd, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
   child.stdout.on('data', (chunk) => process.stdout.write(`[${name}] ${chunk}`));
   child.stderr.on('data', (chunk) => process.stderr.write(`[${name}] ${chunk}`));
   child.on('exit', (code, signal) => {
@@ -22,11 +22,11 @@ const backend = start('api', 'node', ['src/server.js'], {
   PERSISTENCE_MODE: process.env.PERSISTENCE_MODE || 'mongo',
   EXECUTION_MODE: process.env.EXECUTION_MODE || 'disabled',
   ALLOW_UNSANDBOXED_EXECUTION: 'false',
-});
+}, '/app/backend');
 const frontend = start('web', 'node', ['serve.js'], {
   PORT: publicPort,
   BACKEND_URL: `http://127.0.0.1:${backendPort}`,
-});
+}, '/app/frontend');
 
 function shutdown(code = 0) {
   if (shuttingDown) return;

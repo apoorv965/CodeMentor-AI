@@ -1043,6 +1043,24 @@
       padding: .9rem .9rem 0;
     }
 
+    .cm-examples { margin-top: 1.35rem; }
+    .cm-example { padding: .8rem 0 1rem; border-top: 1px solid var(--lc-line2); }
+    .cm-example-head, .cm-next-head { display:flex; align-items:center; justify-content:space-between; gap:.7rem; }
+    .cm-example-head strong { font-size:.82rem; }
+    .cm-example-grid { display:grid; grid-template-columns:1fr 1fr; gap:.55rem; }
+    .cm-example pre { margin:0; padding:.65rem .7rem; border:1px solid var(--lc-line2); border-radius:6px; background:var(--lc-panel2); color:var(--paper); font: .76rem/1.45 'JetBrains Mono',monospace; white-space:pre-wrap; overflow:auto; }
+    .cm-example-note { font-size:.77rem; line-height:1.5; margin:.65rem 0 0; }
+    .cm-approach { margin-top:1rem; padding:.8rem .85rem; border:1px solid rgba(124,108,255,.24); border-radius:8px; background:rgba(124,108,255,.06); font-size:.8rem; line-height:1.55; }
+    .cm-approach p { margin:.35rem 0; }
+    .cm-next-panel { margin: .3rem .8rem 1rem; padding: .9rem; border:1px solid rgba(255,166,0,.28); border-radius:10px; background:linear-gradient(135deg,rgba(255,166,0,.08),rgba(124,108,255,.06)); }
+    .cm-next-head h3 { margin:.22rem 0 .7rem; font-size:.95rem; }
+    .cm-recommendation-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:.55rem; }
+    .cm-recommendation { display:flex; flex-direction:column; align-items:flex-start; gap:.35rem; text-align:left; padding:.72rem; border:1px solid var(--lc-line2); border-radius:8px; background:var(--lc-panel2); color:var(--paper); cursor:pointer; transition:border-color .16s, transform .16s; }
+    .cm-recommendation:hover { border-color:var(--lc-orange); transform:translateY(-1px); }
+    .cm-recommendation strong { font-size:.8rem; line-height:1.35; }
+    .cm-rec-meta { display:flex; align-items:center; flex-wrap:wrap; gap:.3rem; }
+    @media (max-width:620px) { .cm-example-grid { grid-template-columns:1fr; } .cm-next-head { align-items:flex-start; flex-direction:column; } }
+
     textarea.lc-code-input {
       flex: 1;
       width: 100%;
@@ -13084,6 +13102,7 @@
           whyOpen: false,
           hintLoading: false,
           hintLevel: 1,
+          recommendations: null,
           leftTab: "description",
           consoleTab: "testcase",
           activeCase: 0,
@@ -13180,10 +13199,13 @@
     }
 
     function renderProblemDescription(problem) {
+      const examples = (problem.examples || problem.publicTests || []).slice(0, 3);
       return `
     <h2>${escapeHtml(problem.title)}</h2>
     <p>${escapeHtml(problem.description)}</p>
     <div class="lc-tag-row">${problem.tags.map(t => `<span class="tag">${t}</span>`).join("")}</div>
+    ${examples.length ? `<div class="cm-examples"><div class="lc-case-label">Examples</div>${examples.map((e, i) => `<article class="cm-example"><div class="cm-example-head"><strong>Example ${i + 1}</strong><span class="mono muted">${escapeHtml(problem.fnName || 'function')}()</span></div><div class="cm-example-grid"><div><div class="lc-case-label">Input</div><pre>${escapeHtml(e.input || '')}</pre></div><div><div class="lc-case-label">Output</div><pre>${escapeHtml(e.output ?? e.expected ?? '')}</pre></div></div><p class="muted cm-example-note">${escapeHtml(e.explanation || 'Apply the function to the input and return the expected value.')}</p></article>`).join("")}</div>` : ""}
+    ${problem.approach ? `<div class="cm-approach"><div class="lc-case-label">Approach</div><p>${escapeHtml(problem.approach)}</p>${problem.complexity ? `<p class="muted"><strong>Complexity:</strong> ${escapeHtml(problem.complexity)}</p>` : ""}</div>` : ""}
   `;
     }
 
@@ -13201,6 +13223,13 @@
     ${history.length > 1 ? `${sep}<div class="lc-case-label">Earlier hints</div><ol class="muted" style="padding-left:1.1rem;margin:.4rem 0 0;">${history.slice(0, -1).map(x => `<li style="margin-bottom:.35rem;">L${x.level} · ${escapeHtml(x.hint)}</li>`).join("")}</ol>` : ""}
     ${sep}<p class="muted" style="font-size:.75rem;">Next hint: level ${Math.min(3, s.hintLevel || 1)}. Edit your code and run again — if it still fails, the mentor steps up a level on its own.</p>
   `;
+    }
+
+    function renderRecommendations(problem, s) {
+      const rec = s.recommendations;
+      if (!rec) return "";
+      const card = (item, label) => item ? `<button class="cm-recommendation" onclick="go('practice/${encodeURIComponent(item.id)}')"><span class="eyebrow mono">${label}</span><strong>${escapeHtml(item.title)}</strong><span class="cm-rec-meta"><span class="lc-pill ${item.difficulty}">${item.difficulty}</span>${(item.tags || []).slice(0, 2).map(t => `<span class="lc-tag-inline">${escapeHtml(prettyTag(t))}</span>`).join("")}</span></button>` : "";
+      return `<section class="cm-next-panel"><div class="cm-next-head"><div><div class="eyebrow mono">KEEP YOUR MOMENTUM</div><h3>${rec.accepted ? "Nice work — choose your next challenge" : "Keep iterating — these are good follow-ups"}</h3></div><button class="lc-btn" onclick="go('practice')">View all problems</button></div><div class="cm-recommendation-grid">${card(rec.next, "NEXT IN PATH")}${(rec.similar || []).map(x => card(x, "SIMILAR SKILL")).join("")}</div></section>`;
     }
 
     function renderConsoleBody(problem, s) {
@@ -13240,6 +13269,7 @@
     <div class="lc-case-body">
       ${renderCaseResult(problem, s)}
     </div>
+    ${renderRecommendations(problem, s)}
   `;
     }
 
@@ -13282,6 +13312,25 @@
         });
         s.results = data;
         s.running = false;
+
+        if (isSubmit) {
+          try {
+            const catalog = await getProblems();
+            const currentIndex = catalog.findIndex(x => x.id === problem.id);
+            const remaining = catalog.filter(x => x.id !== problem.id);
+            const currentTags = new Set(problem.tags || []);
+            const similar = remaining
+              .map(x => ({ ...x, score: (x.tags || []).filter(t => currentTags.has(t)).length }))
+              .filter(x => x.score > 0)
+              .sort((a, b) => b.score - a.score || a.difficulty.localeCompare(b.difficulty))
+              .slice(0, 3);
+            s.recommendations = {
+              accepted: data.status === "Accepted",
+              next: catalog[currentIndex + 1] || remaining[0] || null,
+              similar,
+            };
+          } catch (_) { s.recommendations = null; }
+        }
 
         // Auto-hint + automatic escalation. A failed run always offers a hint
         // inline; and if they already took a hint at this level and it is

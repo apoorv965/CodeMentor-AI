@@ -85,6 +85,24 @@ function deleteProgram(userId, programId) {
 }
 
 function publicProblem(problem) {
+  const title = String(problem.title || '').toLowerCase();
+  const explainExample = (test, index) => {
+    if (title === 'two sum') return index === 0
+      ? 'The pair 2 + 7 equals 9, so return their zero-based positions [0, 1].'
+      : 'The pair 2 + 4 equals 6, so return their zero-based positions [1, 2].';
+    if (title === 'reverse a string') return `Read the characters from right to left: ${test.input} becomes ${test.expected}.`;
+    if (title === 'valid parentheses') return test.expected === 'True'
+      ? 'Every opening bracket is closed in the correct order, so the string is valid.'
+      : 'The closing bracket does not match the most recent opening bracket, so the string is invalid.';
+    if (title === 'binary search') return 'Because the array is sorted, compare the middle value and discard half of the remaining search space.';
+    return `Apply ${problem.fnName || 'the function'} to the input and return the value required by the problem statement.`;
+  };
+  const examples = (problem.tests || []).slice(0, 3).map((test, index) => ({
+    input: test.input,
+    output: test.expected,
+    expected: test.expected,
+    explanation: explainExample(test, index)
+  }));
   return {
     id: problem.id,
     title: problem.title,
@@ -97,6 +115,9 @@ function publicProblem(problem) {
     returnType: problem.returnType,
     tests: problem.tests || [],
     publicTests: problem.tests || [],
+    examples,
+    approach: `Implement ${problem.fnName || 'the required function'} using the input contract above, then return the value in the requested ${problem.returnType || 'format'}.`,
+    complexity: 'Aim for a linear-time solution where the problem constraints allow it.',
     hasJudge: Boolean(problem.tests?.length),
     needsManualTests: false,
   };

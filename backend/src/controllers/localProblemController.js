@@ -21,7 +21,10 @@ function getMyProgress(req, res) { return res.json({ success: true, progress: lo
 
 async function submitSolution(req, res, next) {
   try {
-    if (req.body.mode !== 'run' && !req.user) {
+    // Render preview/local-first mode has no durable account identity. Allow
+    // the learning loop to grade hidden tests for guest/Google-local sessions;
+    // Mongo mode remains protected by the production controller and auth route.
+    if (req.body.mode !== 'run' && !req.user && (process.env.PERSISTENCE_MODE || 'memory') === 'mongo') {
       return res.status(401).json({ success: false, message: 'Sign in with an email/password account to submit hidden tests.' });
     }
     const problem = local.getProblem(req.params.id);
@@ -37,7 +40,7 @@ async function submitSolution(req, res, next) {
     }
     const passed = cases.filter((test) => test.pass).length;
     const result = { status: passed === cases.length ? 'Accepted' : 'Wrong Answer', passed, total: cases.length, cases, executionTime: `${Date.now() % 1000}ms` };
-    if (req.body.mode !== 'run') local.recordProgress(userId(req.user), problem.id, result);
+    if (req.body.mode !== 'run') local.recordProgress(userId(req.user) || 'guest', problem.id, result);
     const responseCases = req.body.mode === 'run' ? cases : cases.map(({ pass, error }) => ({ pass, error }));
     return res.json({ success: true, mode: req.body.mode === 'run' ? 'run' : 'submit', ...result, cases: responseCases, submissionId: `local_${Date.now()}` });
   } catch (err) { next(err); }

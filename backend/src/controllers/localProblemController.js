@@ -1,5 +1,5 @@
 const local = require('../services/localStore');
-const { executeCode } = require('../services/dockerExecutor');
+const { judgeSubmission } = require('../services/judgeService');
 const userId = (user) => String(user?._id || user?.id || '');
 
 async function listProblems(req, res) {
@@ -32,14 +32,16 @@ async function submitSolution(req, res, next) {
     const code = String(req.body.code || '');
     if (!code.trim()) return res.status(400).json({ success: false, message: 'Code is required' });
     const language = req.body.language || 'python';
-    const cases = [];
-    for (const test of problem.tests || []) {
-      const run = await executeCode(language, code, test.input);
-      const actual = (run.output || '').trim();
-      cases.push({ pass: run.success && actual === String(test.expected).trim(), input: test.input, expected: test.expected, actual, error: run.error });
-    }
-    const passed = cases.filter((test) => test.pass).length;
-    const result = { status: passed === cases.length ? 'Accepted' : 'Wrong Answer', passed, total: cases.length, cases, executionTime: `${Date.now() % 1000}ms` };
+    // Practice metadata describes callable solutions (fnName + paramTypes).
+    // The shared judge appends a secure test harness, parses each input line,
+    // invokes the function, and normalizes list output before comparing it.
+    const result = await judgeSubmission({ problem, code, language, tests: problem.tests || [] });
+    const cases = result.cases.map((test, index) => ({
+      ...test,
+      input: problem.tests[index]?.input,
+      expected: problem.tests[index]?.expected,
+    }));
+    result.cases = cases;
     if (req.body.mode !== 'run') local.recordProgress(userId(req.user) || 'guest', problem.id, result);
     const responseCases = req.body.mode === 'run' ? cases : cases.map(({ pass, error }) => ({ pass, error }));
     return res.json({ success: true, mode: req.body.mode === 'run' ? 'run' : 'submit', ...result, cases: responseCases, submissionId: `local_${Date.now()}` });

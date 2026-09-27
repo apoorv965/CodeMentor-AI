@@ -9,5 +9,8 @@ const handlers = isLocal ? require('../controllers/localProblemController') : re
 router.get('/', handlers.listProblems);
 router.get('/progress/me', protect, handlers.getMyProgress);
 router.get('/:id', optionalAuth, handlers.getProblem);
-router.post('/:id/submit', protect, submitLimiter, handlers.submitSolution);
+// Public sample runs do not read or mutate user progress. The controller keeps
+// hidden-test submissions authenticated, so Google/local guest sessions can
+// still use Run without weakening account-scoped solving and analytics.
+router.post('/:id/submit', optionalAuth, submitLimiter, handlers.submitSolution);
 module.exports = router;

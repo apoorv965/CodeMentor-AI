@@ -21,6 +21,9 @@ function getMyProgress(req, res) { return res.json({ success: true, progress: lo
 
 async function submitSolution(req, res, next) {
   try {
+    if (req.body.mode !== 'run' && !req.user) {
+      return res.status(401).json({ success: false, message: 'Sign in with an email/password account to submit hidden tests.' });
+    }
     const problem = local.getProblem(req.params.id);
     if (!problem) return res.status(404).json({ success: false, message: 'Problem not found' });
     const code = String(req.body.code || '');

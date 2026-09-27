@@ -140,6 +140,10 @@ const submitSolution = async (req, res, next) => {
     const { code, language, mode } = req.body;
     const runMode = mode === 'run' ? 'run' : 'submit';
 
+    if (runMode === 'submit' && !req.user) {
+      return res.status(401).json({ success: false, message: 'Sign in with an email/password account to submit hidden tests.' });
+    }
+
     if (!code || typeof code !== 'string' || !code.trim()) {
       return res.status(400).json({ success: false, message: 'Code is required' });
     }

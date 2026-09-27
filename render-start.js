@@ -20,8 +20,8 @@ let shuttingDown = false;
 const backend = start('api', 'node', ['src/server.js'], {
   PORT: backendPort,
   PERSISTENCE_MODE: process.env.PERSISTENCE_MODE || 'mongo',
-  EXECUTION_MODE: process.env.EXECUTION_MODE || 'disabled',
-  ALLOW_UNSANDBOXED_EXECUTION: 'false',
+  EXECUTION_MODE: process.env.EXECUTION_MODE || 'local',
+  ALLOW_UNSANDBOXED_EXECUTION: process.env.ALLOW_UNSANDBOXED_EXECUTION || 'true',
 }, '/app/backend');
 const frontend = start('web', 'node', ['serve.js'], {
   PORT: publicPort,

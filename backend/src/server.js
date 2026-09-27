@@ -34,13 +34,14 @@ app.use((req, res, next) => {
   res.setHeader('X-Request-ID', req.id);
   next();
 });
-const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5500,http://127.0.0.1:5500,http://localhost:3000,https://apoorv965.github.io')
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5500,http://127.0.0.1:5500,http://localhost:3000,https://apoorv965.github.io,https://codementor-ai-ntgb.onrender.com')
   .split(',').map(v => v.trim()).filter(Boolean);
 
 app.use(cors({
   origin(origin, callback) {
     // Allow non-browser clients (curl/Postman) and explicitly configured browser origins.
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return callback(null, true);
     // Manus preview/public workspaces use a rotating subdomain under this host.
     // The frontend and API can be same-product deployments on different ports,
     // so allow only the trusted Manus computer origin pattern here.

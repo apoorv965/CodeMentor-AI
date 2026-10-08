@@ -1061,6 +1061,36 @@
     .cm-rec-meta { display:flex; align-items:center; flex-wrap:wrap; gap:.3rem; }
     @media (max-width:620px) { .cm-example-grid { grid-template-columns:1fr; } .cm-next-head { align-items:flex-start; flex-direction:column; } }
 
+    .journey-hero { display:flex; justify-content:space-between; gap:1.5rem; align-items:flex-end; margin-bottom:1.4rem; }
+    .journey-hero h1 { margin:.25rem 0 .5rem; letter-spacing:-.04em; }
+    .journey-actions { display:flex; gap:.55rem; flex-wrap:wrap; }
+    .journey-grid { display:grid; grid-template-columns:minmax(0,1.45fr) minmax(260px,.75fr); gap:1rem; }
+    .journey-card { padding:1.1rem; border:1px solid var(--line-soft); border-radius:12px; background:linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.018)); }
+    .journey-card h2 { margin:.25rem 0 .75rem; font-size:1.1rem; }
+    .journey-progress { height:8px; background:rgba(255,255,255,.08); border-radius:999px; overflow:hidden; }
+    .journey-progress > span { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#8b7cff,#38d6b3); }
+    .roadmap-stage { display:grid; grid-template-columns:34px 1fr auto; gap:.75rem; align-items:start; padding:.9rem 0; border-top:1px solid var(--line-soft); }
+    .roadmap-stage:first-child { border-top:0; }
+    .roadmap-dot { width:28px; height:28px; display:grid; place-items:center; border-radius:50%; color:#0d1118; background:#78859b; font-weight:800; font-size:.78rem; }
+    .roadmap-stage.active .roadmap-dot { background:#f5c45f; box-shadow:0 0 0 5px rgba(245,196,95,.12); }
+    .roadmap-stage.done .roadmap-dot { background:#38d6b3; }
+    .roadmap-stage h3 { margin:0 0 .2rem; font-size:.9rem; }
+    .roadmap-stage p { margin:0; color:var(--muted); font-size:.78rem; line-height:1.5; }
+    .journey-kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:1rem; }
+    .journey-kpi { padding:.75rem; border-radius:9px; background:rgba(255,255,255,.035); }
+    .journey-kpi strong { display:block; margin-top:.25rem; font-size:1.2rem; }
+    .journey-list { margin:.4rem 0 0; padding-left:1.15rem; color:var(--muted); font-size:.8rem; line-height:1.7; }
+    .assessment-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:.8rem; }
+    .assessment-grid label { display:flex; flex-direction:column; gap:.35rem; color:var(--muted); font-size:.76rem; }
+    .assessment-grid select { width:100%; padding:.65rem .7rem; border:1px solid var(--line-soft); border-radius:7px; background:var(--panel); color:var(--paper); }
+    .pattern-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:.8rem; }
+    .pattern-card { padding:1rem; border:1px solid var(--line-soft); border-radius:11px; background:rgba(255,255,255,.03); }
+    .pattern-card h3 { margin:.35rem 0 .4rem; font-size:.95rem; }
+    .pattern-card p { margin:0 0 .65rem; color:var(--muted); font-size:.78rem; line-height:1.55; }
+    .pattern-card details { color:var(--muted); font-size:.76rem; line-height:1.55; }
+    @media (max-width:850px) { .journey-hero { align-items:flex-start; flex-direction:column; } .journey-grid { grid-template-columns:1fr; } }
+    @media (max-width:560px) { .assessment-grid { grid-template-columns:1fr; } .journey-kpis { grid-template-columns:1fr; } }
+
     textarea.lc-code-input {
       flex: 1;
       width: 100%;
@@ -12244,7 +12274,7 @@
       const app = document.getElementById("app");
       app.innerHTML = `<div class="page"><p class="muted">Loading…</p></div>`;
 
-      const authedRoutes = ["dashboard", "editor", "practice", "topics", "profile"];
+      const authedRoutes = ["dashboard", "editor", "practice", "topics", "journey", "patterns", "profile"];
       const routeBase = hash.split("/")[0];
 
       if (authedRoutes.includes(routeBase) && !CURRENT_USER) {
@@ -12263,6 +12293,8 @@
       // #/topics/<tag>      -> the practice table pre-filtered to that tag
       else if (hash === "topics") await renderTopics(app);
       else if (hash.startsWith("topics/")) await renderPractice(app, hash.split("/")[1]);
+      else if (hash === "journey") await renderJourney(app);
+      else if (hash === "patterns") renderPatterns(app);
       else if (hash === "profile") renderProfile(app);
       else app.innerHTML = `<div class="page container"><h1>Not found</h1><p class="muted">That page doesn't exist. <a href="#/" class="signal">Go home</a></p></div>`;
 
@@ -12279,6 +12311,8 @@
         { href: "editor", label: "Editor" },
         { href: "practice", label: "Practice" },
         { href: "topics", label: "Topics" },
+        { href: "journey", label: "My Journey" },
+        { href: "patterns", label: "DSA Patterns" },
         { href: "profile", label: "Profile" },
       ];
       nav.innerHTML = `
@@ -12971,6 +13005,54 @@
         el.focus();
         el.selectionStart = el.selectionEnd = el.value.length;
       });
+    }
+
+    const JOURNEY_STAGES = [
+      { title: "Programming Fundamentals", topics: "Variables · input/output · conditions · loops", problems: 12, project: "Number Guessing Game", language: "Python" },
+      { title: "Basic Problem Solving", topics: "Strings · arrays · functions · complexity", problems: 18, project: "Student Grade Calculator", language: "Python" },
+      { title: "Data Structures", topics: "Hash maps · stacks · queues · linked lists", problems: 24, project: "To-do List with Search", language: "Python / JavaScript" },
+      { title: "Algorithms & Patterns", topics: "Two pointers · binary search · sliding window", problems: 28, project: "Algorithm Visualizer", language: "Python / C++" },
+      { title: "Interview Preparation", topics: "Graphs · trees · dynamic programming · mock rounds", problems: 35, project: "Timed Interview Set", language: "Your choice" },
+    ];
+    const DSA_PATTERNS = [
+      ["Two Pointers", "Use two positions that move through a sequence to avoid nested loops.", "Sorted arrays, pairs, or a left/right boundary are strong signals.", "Two Sum II · Valid Palindrome"],
+      ["Sliding Window", "Keep a moving range and update it as the right edge advances.", "Look for longest, shortest, or count-of-subarray questions.", "Longest Substring · Maximum Sum Window"],
+      ["Hashing", "Store values or frequencies for fast lookup while scanning once.", "Use it when the question asks whether something was seen before.", "Two Sum · Frequency Counter"],
+      ["Binary Search", "Repeatedly discard half of an ordered search space.", "The data is sorted, or the answer is monotonic.", "Search Insert Position · First Bad Version"],
+      ["Stack", "Last-in, first-out storage for nested or undo-like work.", "Brackets, next greater elements, or expression parsing.", "Valid Parentheses · Min Stack"],
+      ["Prefix Sum", "Precompute running totals so range questions become constant-time.", "Repeated subarray or range-sum queries are a clue.", "Range Sum Query · Subarray Sum"],
+      ["Recursion & Backtracking", "Make a choice, explore it, then undo it and try the next choice.", "Combinations, permutations, paths, and constraint searches.", "Subsets · N-Queens"],
+      ["BFS / DFS", "Traverse graph or tree relationships systematically.", "The input contains nodes, edges, levels, or connected regions.", "Number of Islands · Tree Traversal"],
+      ["Dynamic Programming", "Reuse answers to smaller overlapping subproblems.", "The problem asks for an optimum count, cost, or number of ways.", "Climbing Stairs · House Robber"],
+    ];
+
+    function getJourneyProfile() {
+      try { return JSON.parse(localStorage.getItem("codementor_journey") || "null"); } catch (_) { return null; }
+    }
+    function saveJourneyProfile(profile) { localStorage.setItem("codementor_journey", JSON.stringify(profile)); }
+    function renderJourneyAssessment(app) {
+      app.innerHTML = `<div class="page container-sm"><div class="journey-hero"><div><div class="eyebrow mono">START HERE</div><h1>Find your coding level</h1><p class="sub">Answer five quick questions. We’ll build a calm, beginner-friendly learning path instead of throwing random problems at you.</p></div></div><section class="journey-card"><form id="journey-assessment"><div class="assessment-grid"><label>Experience<select name="experience"><option value="new">I have never coded</option><option value="some">I know the basics</option><option value="practice">I solve coding problems</option></select></label><label>Starting language<select name="language"><option>Python</option><option>JavaScript</option><option>Java</option><option>C++</option></select></label><label>Main goal<select name="goal"><option value="foundations">Learn from zero</option><option value="college">College fundamentals</option><option value="placements">Placements / interviews</option><option value="web">Web development</option><option value="ai">AI / data science</option></select></label><label>Daily time<select name="time"><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">1 hour</option><option value="90">90+ minutes</option></select></label><label>Learning style<select name="style"><option value="guided">Step-by-step guidance</option><option value="practice">Learn by practicing</option><option value="projects">Build small projects</option></select></label></div><div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-top:1.1rem;flex-wrap:wrap;"><label style="display:flex;align-items:center;gap:.5rem;color:var(--muted);font-size:.78rem;"><input type="checkbox" name="beginnerMode" checked /> Beginner Mode: simple language, examples first</label><button class="btn btn-primary" type="submit">Build my journey ${ICONS.arrowRight}</button></div></form></section></div>`;
+      document.getElementById("journey-assessment").addEventListener("submit", (event) => { event.preventDefault(); const form = new FormData(event.currentTarget); const profile = Object.fromEntries(form.entries()); profile.beginnerMode = form.get("beginnerMode") === "on"; profile.createdAt = Date.now(); saveJourneyProfile(profile); renderJourney(app); });
+    }
+
+    async function renderJourney(app) {
+      const profile = getJourneyProfile();
+      if (!profile) return renderJourneyAssessment(app);
+      const [problems, progress] = await Promise.all([getProblems(), getProgress(CURRENT_USER.id)]);
+      const solved = problems.filter(p => progress[p.id]?.solved).length;
+      const percent = Math.min(100, Math.round((solved / Math.max(1, Math.min(problems.length, 100))) * 100));
+      const stageIndex = Math.min(JOURNEY_STAGES.length - 1, Math.floor(solved / 6));
+      const stage = JOURNEY_STAGES[stageIndex];
+      const next = problems.find(p => !progress[p.id]?.solved && p.difficulty === (stageIndex < 2 ? "easy" : "medium")) || problems.find(p => !progress[p.id]?.solved);
+      const weak = stageIndex === 0 ? "Loops & problem decomposition" : stage.topics.split(" · ")[0];
+      app.innerHTML = `<div class="page container"><div class="journey-hero"><div><div class="eyebrow mono">PERSONAL LEARNING OS</div><h1>My Coding Journey</h1><p class="sub">A guided path from ${profile.experience === "new" ? "zero" : "your current level"} to confident problem solving.</p></div><div class="journey-actions"><button class="btn btn-primary" id="daily-mission">What should I learn today?</button><button class="btn btn-ghost" id="reset-journey">Retake assessment</button></div></div><div class="journey-grid"><section class="journey-card"><div class="eyebrow mono">CURRENT STAGE · ${stageIndex + 1}/${JOURNEY_STAGES.length}</div><h2>${escapeHtml(stage.title)}</h2><p class="sub">${escapeHtml(stage.topics)}</p><div class="journey-progress"><span style="width:${percent}%"></span></div><div class="journey-kpis"><div class="journey-kpi"><span class="eyebrow mono">SOLVED</span><strong>${solved}</strong><span class="muted">problems</span></div><div class="journey-kpi"><span class="eyebrow mono">LANGUAGE</span><strong>${escapeHtml(profile.language)}</strong><span class="muted">recommended for ${escapeHtml(profile.goal)}</span></div><div class="journey-kpi"><span class="eyebrow mono">FOCUS</span><strong>${escapeHtml(weak)}</strong><span class="muted">next skill</span></div></div><div class="cm-next-panel" style="margin:1rem 0 0;"><div class="eyebrow mono">TODAY’S MISSION · ${profile.time} MIN</div><h3 style="margin:.3rem 0;">${escapeHtml(next ? next.title : "Review your strongest topic")}</h3><p class="muted" style="margin:.25rem 0 .75rem;">Learn ${escapeHtml(weak)}, then solve one focused ${stage.difficulty || "easy"} problem. Use Mentor Hint only after trying first.</p><button class="btn btn-primary" onclick="go('${next ? `practice/${next.id}` : "practice"}')">Start today’s mission ${ICONS.arrowRight}</button></div></section><section class="journey-card"><div class="eyebrow mono">ROADMAP</div><h2>Your path</h2>${JOURNEY_STAGES.map((item, i) => `<div class="roadmap-stage ${i < stageIndex ? "done" : i === stageIndex ? "active" : ""}"><span class="roadmap-dot">${i < stageIndex ? "✓" : i + 1}</span><div><h3>${item.title}</h3><p>${item.topics}</p><p class="muted">${item.problems} practice problems · ${item.project}</p></div><span class="lc-pill ${i <= stageIndex ? "easy" : ""}">${i < stageIndex ? "Done" : i === stageIndex ? "Now" : "Next"}</span></div>`).join("")}</section></div><section class="journey-card" style="margin-top:1rem;"><div class="journey-hero" style="margin:0;"><div><div class="eyebrow mono">BEGINNER MODE</div><h2 style="margin:.3rem 0;">Learn without feeling overwhelmed</h2><p class="sub">Examples first · simple explanations · prerequisite suggestions · hints before solutions.</p></div><label style="display:flex;align-items:center;gap:.5rem;color:var(--muted);font-size:.8rem;"><input type="checkbox" id="beginner-toggle" ${profile.beginnerMode !== false ? "checked" : ""}/> Beginner Mode ON</label></div></section></div>`;
+      document.getElementById("daily-mission").addEventListener("click", () => toast(`Today: learn ${weak}, then solve ${next ? next.title : "one focused practice problem"}.`));
+      document.getElementById("reset-journey").addEventListener("click", () => { localStorage.removeItem("codementor_journey"); renderJourney(app); });
+      document.getElementById("beginner-toggle").addEventListener("change", (e) => { profile.beginnerMode = e.target.checked; saveJourneyProfile(profile); toast(profile.beginnerMode ? "Beginner Mode is on." : "Beginner Mode is off."); });
+    }
+
+    function renderPatterns(app) {
+      app.innerHTML = `<div class="page container"><div class="journey-hero"><div><div class="eyebrow mono">LEARN BY RECOGNITION</div><h1>DSA Patterns</h1><p class="sub">Patterns help you recognize the shape of a problem before you write code. Start with the clue, not the solution.</p></div><button class="btn btn-primary" onclick="go('practice')">Practice a pattern ${ICONS.arrowRight}</button></div><div class="pattern-grid">${DSA_PATTERNS.map(([title,what,when,examples]) => `<article class="pattern-card"><span class="lc-pill easy">Pattern</span><h3>${title}</h3><p>${what}</p><details><summary>How do I recognize it?</summary><p style="margin-top:.5rem;">${when}</p><p><strong>Try:</strong> ${examples}</p></details></article>`).join("")}</div></div>`;
     }
 
     // `tag` comes from the route: "all" for #/practice, a tag slug for

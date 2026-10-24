@@ -29,12 +29,14 @@ const login = async (req, res, next) => {
     if (useLocal()) {
       const user = local.findUserByEmail(email);
       if (!local.verifyPassword(user, password)) return res.status(401).json({ success: false, message: 'Invalid email or password' });
+      if (process.env.ADMIN_EMAIL?.toLowerCase() === user.email && user.role !== 'admin') user.role = 'admin';
       if (user.status === 'suspended') return res.status(403).json({ success: false, message: 'This account is suspended' });
       user.lastLoginAt = new Date();
       return res.json({ success: true, token: generateToken(user.id), user: local.safeUser(user) });
     }
     const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
     if (!user || !(await user.comparePassword(password))) return res.status(401).json({ success: false, message: 'Invalid email or password' });
+    if (process.env.ADMIN_EMAIL?.toLowerCase() === user.email && user.role !== 'admin') user.role = 'admin';
     if (user.status === 'suspended') return res.status(403).json({ success: false, message: 'This account is suspended' });
     user.lastLoginAt = new Date(); await user.save();
     return res.json({ success: true, token: generateToken(user._id), user: user.toSafeObject() });

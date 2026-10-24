@@ -18,12 +18,12 @@ function now() {
 
 function safeUser(user) {
   if (!user) return null;
-  return { id: user.id, name: user.name, email: user.email, createdAt: user.createdAt };
+  return { id: user.id, name: user.name, email: user.email, createdAt: user.createdAt, role: user.role || 'user', status: user.status || 'active', lastLoginAt: user.lastLoginAt || null };
 }
 
 function createUser({ name, email, password }) {
   const normalizedEmail = email.trim().toLowerCase();
-  const user = { id: id('usr_'), name: name.trim(), email: normalizedEmail, password: bcrypt.hashSync(password, 10), createdAt: now() };
+  const user = { id: id('usr_'), name: name.trim(), email: normalizedEmail, password: bcrypt.hashSync(password, 10), role: process.env.ADMIN_EMAIL?.toLowerCase() === normalizedEmail ? 'admin' : 'user', status: 'active', lastLoginAt: null, createdAt: now() };
   users.set(user.id, user);
   return user;
 }
@@ -126,6 +126,24 @@ function deleteProject(userId, projectId) {
   const project = getProject(userId, projectId);
   if (!project) return false;
   projects.delete(String(projectId));
+  return true;
+}
+
+function adminUsers() {
+  return [...users.values()].map(safeUser).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+}
+
+function adminSetUserStatus(userId, status) {
+  const user = findUserById(userId);
+  if (!user) return null;
+  user.status = status;
+  return safeUser(user);
+}
+
+function adminDeleteUser(userId) {
+  if (!users.has(userId)) return false;
+  users.delete(userId);
+  for (const [key, project] of projects.entries()) if (project.user === userId) projects.delete(key);
   return true;
 }
 
@@ -265,6 +283,9 @@ module.exports = {
   updateProject,
   touchProject,
   deleteProject,
+  adminUsers,
+  adminSetUserStatus,
+  adminDeleteUser,
   publicProblem,
   listProblems,
   getProblem,

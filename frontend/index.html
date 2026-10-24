@@ -2137,6 +2137,8 @@
   
     .project-list{display:grid;gap:.45rem}.project-row{display:flex;align-items:center;gap:.75rem;padding:.7rem .8rem;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.02)}.project-open{display:flex;align-items:center;gap:.7rem;flex:1;text-align:left;background:none;border:0;color:inherit;cursor:pointer}.project-open strong,.project-open small{display:block}.project-open small{color:var(--muted);font-size:.75rem;margin-top:.2rem}.project-icon{display:grid;place-items:center;width:30px;height:30px;border-radius:8px;background:rgba(155,142,255,.14);color:var(--signal)}.project-row .text-link{background:none;border:0;cursor:pointer;font:inherit}.project-delete{color:#ff8c8c}.project-rename{color:var(--signal)}
     #monaco-host{background:#0f1723}.code-input{min-height:430px}
+
+    .admin-table-wrap{overflow:auto}.admin-table{width:100%;border-collapse:collapse;min-width:760px}.admin-table th,.admin-table td{padding:.8rem .6rem;border-bottom:1px solid var(--line);text-align:left;font-size:.8rem}.admin-table th{color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.08em}.admin-table td strong,.admin-table td small{display:block}.admin-table td small{color:var(--muted);margin-top:.2rem}.admin-table .text-link{background:none;border:0;cursor:pointer;font:inherit;color:var(--signal);margin-right:.65rem}.admin-table .admin-delete{color:#ff8c8c}
 </style>
 </head>
 
@@ -12255,7 +12257,7 @@
         AUTH_TOKEN = session.token;
         try {
           const data = await apiFetch("/api/auth/profile");
-          CURRENT_USER = { id: data.user.id, username: data.user.name, email: data.user.email, provider: "backend", createdAt: data.user.createdAt };
+          CURRENT_USER = { id: data.user.id, username: data.user.name, email: data.user.email, role: data.user.role, status: data.user.status, provider: "backend", createdAt: data.user.createdAt };
         } catch (err) {
           // Token expired/invalid — clear the stale session.
           AUTH_TOKEN = null;
@@ -12277,7 +12279,7 @@
       const app = document.getElementById("app");
       app.innerHTML = `<div class="page"><p class="muted">Loading…</p></div>`;
 
-      const authedRoutes = ["dashboard", "editor", "practice", "topics", "journey", "patterns", "profile"];
+      const authedRoutes = ["dashboard", "editor", "practice", "topics", "journey", "patterns", "profile", "admin"];
       const routeBase = hash.split("/")[0];
 
       if (authedRoutes.includes(routeBase) && !CURRENT_USER) {
@@ -12299,6 +12301,7 @@
       else if (hash === "journey") await renderJourney(app);
       else if (hash === "patterns") renderPatterns(app);
       else if (hash === "profile") renderProfile(app);
+      else if (hash === "admin") await renderAdmin(app);
       else app.innerHTML = `<div class="page container"><h1>Not found</h1><p class="muted">That page doesn't exist. <a href="#/" class="signal">Go home</a></p></div>`;
 
       attachGlobalHandlers();
@@ -12317,6 +12320,7 @@
         { href: "journey", label: "My Journey" },
         { href: "patterns", label: "DSA Patterns" },
         { href: "profile", label: "Profile" },
+        ...(CURRENT_USER?.role === "admin" ? [{ href: "admin", label: "Admin" }] : []),
       ];
       nav.innerHTML = `
     <header class="nav">
@@ -12799,6 +12803,26 @@
       const rows = (activity || []).slice(0, 6);
       if (!rows.length) return `<div class="analytics-empty"><span>${ICONS.repeat}</span><p>No activity yet. Start a problem to begin your learning timeline.</p></div>`;
       return `<div class="activity-list">${rows.map((row) => { const type = row.type === 'hint' ? 'Hint requested' : row.type === 'submission' ? `${row.status || 'Submission'}` : `${row.language || 'Code'} execution`; const icon = row.type === 'hint' ? ICONS.bulb : row.type === 'submission' ? (row.status === 'Accepted' ? ICONS.check : ICONS.repeat) : ICONS.play; return `<div class="activity-row"><span class="activity-icon ${row.success || row.status === 'Accepted' ? 'success' : ''}">${icon}</span><span class="activity-copy"><strong>${escapeHtml(type)}</strong><small>${new Date(row.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${new Date(row.createdAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</small></span><span class="activity-status ${row.success || row.status === 'Accepted' ? 'success' : ''}">${row.success || row.status === 'Accepted' ? 'Complete' : 'Review'}</span></div>`; }).join('')}</div>`;
+    }
+
+    async function renderAdmin(app) {
+      if (!CURRENT_USER || CURRENT_USER.role !== "admin") { app.innerHTML = `<div class="page container-sm"><h1>Admin access required</h1><p class="sub">This area is restricted to the configured administrator account.</p></div>`; return; }
+      const [overview, usersData] = await Promise.all([apiFetch("/api/admin/overview"), apiFetch("/api/admin/users")]);
+      const m = overview.metrics || {}; const users = usersData.users || [];
+      app.innerHTML = `<div class="page container" style="max-width:1250px;"><div class="analytics-header"><div><p class="eyebrow mono">CONTROL CENTER</p><h1>Admin Dashboard</h1><p class="analytics-subtitle">Manage CodeMentor users, projects, and platform activity.</p></div><div class="analytics-header-actions"><button class="btn btn-ghost" id="admin-export">Export users CSV</button></div></div><div class="analytics-kpis"><div class="analytics-kpi accent-purple"><span class="kpi-label">Total users</span><strong>${m.totalUsers || 0}</strong><span class="kpi-foot">Registered accounts</span></div><div class="analytics-kpi accent-teal"><span class="kpi-label">Active users</span><strong>${m.activeUsers || 0}</strong><span class="kpi-foot">Not suspended</span></div><div class="analytics-kpi accent-orange"><span class="kpi-label">New this month</span><strong>${m.newUsers || 0}</strong><span class="kpi-foot">Last 30 days</span></div><div class="analytics-kpi accent-blue"><span class="kpi-label">Projects</span><strong>${m.totalProjects || 0}</strong><span class="kpi-foot">Persistent workspaces</span></div></div><section class="analytics-card" style="margin-top:1rem;"><div class="analytics-card-head"><div><p class="eyebrow mono">DIRECTORY</p><h2>User management</h2></div><input id="admin-search" placeholder="Search name or email" style="max-width:280px;" /></div><div id="admin-users-table">${renderAdminUsers(users)}</div></section></div>`;
+      const search = document.getElementById("admin-search");
+      search.addEventListener("input", async () => { const data = await apiFetch(`/api/admin/users?search=${encodeURIComponent(search.value)}`); document.getElementById("admin-users-table").innerHTML = renderAdminUsers(data.users || []); bindAdminUsers(); });
+      document.getElementById("admin-export").addEventListener("click", async () => { const response = await fetch(`${BACKEND_URL}/api/admin/users/export`, { headers: { Authorization: `Bearer ${AUTH_TOKEN}` } }); const blob = await response.blob(); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "codementor-users.csv"; link.click(); URL.revokeObjectURL(link.href); });
+      bindAdminUsers();
+    }
+    function renderAdminUsers(users) {
+      if (!users.length) return `<div class="analytics-empty"><p>No users found.</p></div>`;
+      return `<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>User</th><th>Role</th><th>Status</th><th>Projects</th><th>Last login</th><th>Actions</th></tr></thead><tbody>${users.map(u => `<tr><td><strong>${escapeHtml(u.name)}</strong><small>${escapeHtml(u.email)}</small></td><td><span class="lc-pill ${u.role === "admin" ? "medium" : "easy"}">${u.role || "user"}</span></td><td><span class="status-dot ${u.status === "active" ? "signal2" : "warn"}">● ${u.status || "active"}</span></td><td>${u.projectCount || 0}</td><td>${u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : "Never"}</td><td><button class="text-link admin-projects" data-id="${escapeHtml(u.id)}">Projects</button>${u.role !== "admin" ? `<button class="text-link admin-toggle" data-id="${escapeHtml(u.id)}" data-status="${u.status === "suspended" ? "active" : "suspended"}">${u.status === "suspended" ? "Activate" : "Suspend"}</button><button class="text-link project-delete admin-delete" data-id="${escapeHtml(u.id)}">Delete</button>` : ""}</td></tr>`).join("")}</tbody></table></div>`;
+    }
+    function bindAdminUsers() {
+      document.querySelectorAll(".admin-toggle").forEach(btn => btn.addEventListener("click", async () => { await apiFetch(`/api/admin/users/${encodeURIComponent(btn.dataset.id)}/status`, { method: "PATCH", body: JSON.stringify({ status: btn.dataset.status }) }); render(); }));
+      document.querySelectorAll(".admin-delete").forEach(btn => btn.addEventListener("click", async () => { if (!confirm("Delete this user and their projects?")) return; await apiFetch(`/api/admin/users/${encodeURIComponent(btn.dataset.id)}`, { method: "DELETE" }); render(); }));
+      document.querySelectorAll(".admin-projects").forEach(btn => btn.addEventListener("click", async () => { const data = await apiFetch(`/api/admin/users/${encodeURIComponent(btn.dataset.id)}/projects`); alert((data.projects || []).map(p => `${p.name} (${(p.files || []).length} files)`).join("\n") || "No projects"); }));
     }
 
     async function renderDashboard(app) {

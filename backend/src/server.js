@@ -16,6 +16,7 @@ const programRoutes = require('./routes/programRoutes');
 const projectRoutes = require('./routes/projectRoutes');
 const mentorRoutes = require('./routes/mentorRoutes');
 const problemRoutes = require('./routes/problemRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 const { getOverview } = require('./controllers/analyticsController');
 const { protect } = require('./middleware/authMiddleware');
 
@@ -91,6 +92,7 @@ app.use('/api/programs', programRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/mentor', mentorRoutes); // -> POST /api/mentor/explain | /find-bug | /hint
 app.use('/api/problems', problemRoutes); // -> GET /, GET /:id, POST /:id/submit
+app.use('/api/admin', adminRoutes);
 app.get('/api/analytics/overview', protect, getOverview);
 
 // ---------- Error handling (must be last) ----------

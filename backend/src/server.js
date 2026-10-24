@@ -13,6 +13,7 @@ const { generalLimiter } = require('./middleware/rateLimiter');
 const authRoutes = require('./routes/authRoutes');
 const compilerRoutes = require('./routes/compilerRoutes');
 const programRoutes = require('./routes/programRoutes');
+const projectRoutes = require('./routes/projectRoutes');
 const mentorRoutes = require('./routes/mentorRoutes');
 const problemRoutes = require('./routes/problemRoutes');
 const { getOverview } = require('./controllers/analyticsController');
@@ -87,6 +88,7 @@ app.get('/api/capabilities', (_req, res) => res.json({
 app.use('/api/auth', authRoutes);
 app.use('/api', compilerRoutes); // -> POST /api/execute
 app.use('/api/programs', programRoutes);
+app.use('/api/projects', projectRoutes);
 app.use('/api/mentor', mentorRoutes); // -> POST /api/mentor/explain | /find-bug | /hint
 app.use('/api/problems', problemRoutes); // -> GET /, GET /:id, POST /:id/submit
 app.get('/api/analytics/overview', protect, getOverview);

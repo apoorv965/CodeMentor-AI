@@ -6,6 +6,7 @@ const users = new Map();
 const programs = [];
 const progress = new Map();
 const events = [];
+const projects = new Map();
 
 function id(prefix = '') {
   return `${prefix}${crypto.randomBytes(8).toString('hex')}`;
@@ -82,6 +83,50 @@ function deleteProgram(userId, programId) {
   const index = programs.findIndex((program) => program.user === userId && program._id === programId);
   if (index === -1) return null;
   return programs.splice(index, 1)[0];
+}
+
+function publicProject(project) {
+  return { id: String(project.id || project._id), name: project.name, files: project.files || [], createdAt: project.createdAt, updatedAt: project.updatedAt, lastOpenedAt: project.lastOpenedAt };
+}
+
+function listProjects(userId, search = '') {
+  const query = String(search || '').trim().toLowerCase();
+  return [...projects.values()].filter((project) => project.user === userId && (!query || project.name.toLowerCase().includes(query))).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)).map(publicProject);
+}
+
+function createProject(userId, data = {}) {
+  const timestamp = now();
+  const project = { id: id('prj_'), user: userId, name: String(data.name || 'Untitled Project').trim().slice(0, 100) || 'Untitled Project', files: Array.isArray(data.files) && data.files.length ? data.files : [{ path: 'main.py', language: 'python', content: '' }], createdAt: timestamp, updatedAt: timestamp, lastOpenedAt: timestamp };
+  projects.set(project.id, project);
+  return publicProject(project);
+}
+
+function getProject(userId, projectId) {
+  const project = projects.get(String(projectId));
+  return project && project.user === userId ? project : null;
+}
+
+function updateProject(userId, projectId, patch = {}) {
+  const project = getProject(userId, projectId);
+  if (!project) return null;
+  if (patch.name !== undefined) project.name = String(patch.name).trim().slice(0, 100) || project.name;
+  if (Array.isArray(patch.files)) project.files = patch.files.map((file) => ({ path: String(file.path || 'main.py').slice(0, 240), language: String(file.language || 'text').slice(0, 40), content: String(file.content || '').slice(0, 200000), updatedAt: file.updatedAt || now() }));
+  project.updatedAt = now();
+  return publicProject(project);
+}
+
+function touchProject(userId, projectId) {
+  const project = getProject(userId, projectId);
+  if (!project) return null;
+  project.lastOpenedAt = now();
+  return publicProject(project);
+}
+
+function deleteProject(userId, projectId) {
+  const project = getProject(userId, projectId);
+  if (!project) return false;
+  projects.delete(String(projectId));
+  return true;
 }
 
 function publicProblem(problem) {
@@ -213,6 +258,13 @@ module.exports = {
   getProgram,
   updateProgram,
   deleteProgram,
+  publicProject,
+  listProjects,
+  createProject,
+  getProject,
+  updateProject,
+  touchProject,
+  deleteProject,
   publicProblem,
   listProblems,
   getProblem,

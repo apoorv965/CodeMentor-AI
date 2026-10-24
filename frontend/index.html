@@ -2134,7 +2134,10 @@
     .analytics-next h2 { margin:.35rem 0 .4rem; font-size:1.15rem; letter-spacing:-.025em; } .analytics-next p:not(.eyebrow) { max-width:40rem; margin:0; color:#91a0b2; font-size:.82rem; line-height:1.55; }
     @media (max-width:900px) { .analytics-kpis { grid-template-columns:repeat(2,1fr); } .analytics-grid-main, .analytics-grid-secondary { grid-template-columns:1fr; } }
     @media (max-width:620px) { .analytics-header { align-items:flex-start; flex-direction:column; gap:1rem; } .analytics-header-actions { width:100%; justify-content:space-between; } .analytics-kpis { grid-template-columns:1fr 1fr; gap:.65rem; } .analytics-kpi { min-height:140px; padding:1rem; } .analytics-kpi strong { font-size:1.45rem; } .analytics-next { align-items:flex-start; flex-direction:column; gap:1rem; } .analytics-next .btn { width:100%; } }
-  </style>
+  
+    .project-list{display:grid;gap:.45rem}.project-row{display:flex;align-items:center;gap:.75rem;padding:.7rem .8rem;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.02)}.project-open{display:flex;align-items:center;gap:.7rem;flex:1;text-align:left;background:none;border:0;color:inherit;cursor:pointer}.project-open strong,.project-open small{display:block}.project-open small{color:var(--muted);font-size:.75rem;margin-top:.2rem}.project-icon{display:grid;place-items:center;width:30px;height:30px;border-radius:8px;background:rgba(155,142,255,.14);color:var(--signal)}.project-row .text-link{background:none;border:0;cursor:pointer;font:inherit}.project-delete{color:#ff8c8c}.project-rename{color:var(--signal)}
+    #monaco-host{background:#0f1723}.code-input{min-height:430px}
+</style>
 </head>
 
 <body>
@@ -12799,7 +12802,7 @@
     }
 
     async function renderDashboard(app) {
-      const [problems, progress, analytics] = await Promise.all([getProblems(), getProgress(CURRENT_USER.id), getAnalytics()]);
+      const [problems, progress, analytics, projects] = await Promise.all([getProblems(), getProgress(CURRENT_USER.id), getAnalytics(), AUTH_TOKEN ? getProjects().catch(() => []) : Promise.resolve([])]);
       const solved = analytics.solved ?? Object.values(progress).filter((item) => item.solved).length;
       const total = analytics.totalProblems || problems.length;
       const attempts = analytics.attempts ?? Object.values(progress).reduce((sum, item) => sum + (item.attempts || 0), 0);
@@ -12813,8 +12816,13 @@
         <div class="analytics-kpis"><div class="analytics-kpi accent-purple"><span class="kpi-icon">${ICONS.check}</span><span class="kpi-label">Problems solved</span><strong>${solved}<small> / ${total}</small></strong><span class="kpi-foot">${pct}% completion</span></div><div class="analytics-kpi accent-teal"><span class="kpi-icon">${ICONS.repeat}</span><span class="kpi-label">Attempts</span><strong>${attempts}</strong><span class="kpi-foot">Across your practice history</span></div><div class="analytics-kpi accent-orange"><span class="kpi-icon">${ICONS.bulb}</span><span class="kpi-label">Mentor hints</span><strong>${hints}</strong><span class="kpi-foot">Guidance requests</span></div><div class="analytics-kpi accent-blue"><span class="kpi-icon">${ICONS.play}</span><span class="kpi-label">Run success rate</span><strong>${analytics.successRate || 0}<small>%</small></strong><span class="kpi-foot">${analytics.averageExecutionMs ? `Avg ${analytics.averageExecutionMs}ms runtime` : 'No runtime data yet'}</span></div></div>
         <div class="analytics-grid analytics-grid-main"><section class="analytics-card analytics-wide"><div class="analytics-card-head"><div><p class="eyebrow mono">ACTIVITY SIGNAL</p><h2>Weekly learning activity</h2></div><span class="analytics-period">Last 7 days</span></div>${renderTrendChart(analytics.trend)}</section><section class="analytics-card"><div class="analytics-card-head"><div><p class="eyebrow mono">COMPLETION MIX</p><h2>Difficulty progress</h2></div></div>${renderDifficultyChart(analytics.difficulty)}</section></div>
         <div class="analytics-grid analytics-grid-secondary"><section class="analytics-card"><div class="analytics-card-head"><div><p class="eyebrow mono">FOCUS AREAS</p><h2>Topic leaderboard</h2></div><a class="text-link" onclick="go('topics')">View all ${ICONS.arrowRight}</a></div>${renderTopicRows(analytics.topics)}</section><section class="analytics-card"><div class="analytics-card-head"><div><p class="eyebrow mono">RECENT EVENTS</p><h2>Activity feed</h2></div></div>${renderActivityRows(analytics.activity)}</section></div>
+        <section class="analytics-card" style="margin-top:1rem;"><div class="analytics-card-head"><div><p class="eyebrow mono">WORKSPACE</p><h2>Recent Projects</h2></div><a class="btn btn-ghost" onclick="go('editor')">Open workspace ${ICONS.arrowRight}</a></div>${projects.length ? `<div class="project-list">${projects.slice(0, 6).map(project => `<div class="project-row"><button class="project-open" data-project-id="${escapeHtml(project.id)}"><span class="project-icon">⌘</span><span><strong>${escapeHtml(project.name)}</strong><small>${(project.files || []).length} file${(project.files || []).length === 1 ? '' : 's'} · Updated ${new Date(project.updatedAt).toLocaleString()}</small></span></button><button class="text-link project-rename" data-project-id="${escapeHtml(project.id)}">Rename</button><button class="text-link project-duplicate" data-project-id="${escapeHtml(project.id)}">Duplicate</button><button class="text-link project-delete" data-project-id="${escapeHtml(project.id)}">Delete</button></div>`).join('')}</div>` : `<div class="analytics-empty"><p>Your projects will appear here after you open the workspace.</p></div>`}</section>
         <div class="analytics-next"><div><p class="eyebrow mono">RECOMMENDED NEXT</p><h2>${nextProblem ? escapeHtml(nextProblem.title) : 'Start your first problem'}</h2><p>${remaining ? `${remaining} problems remain in your learning queue. Keep your momentum with a focused session.` : 'You have completed the current catalog. Explore the editor to keep sharpening your skills.'}</p></div><a class="btn btn-primary" onclick="go('${nextProblem ? `practice/${nextProblem.id}` : 'editor'}')">${progress[nextProblem?.id]?.attempts ? 'Continue problem' : 'Start problem'} ${ICONS.arrowRight}</a></div>
       </div>`;
+      document.querySelectorAll('.project-open').forEach((node) => node.addEventListener('click', async () => { const project = await loadProject(node.dataset.projectId); editorState.project = project; editorState.files = project.files || []; editorState.activePath = editorState.files[0]?.path || 'main.py'; editorState.code = editorState.files[0]?.content || ''; editorState.language = editorState.files[0]?.language || 'python'; go('editor'); }));
+      document.querySelectorAll('.project-rename').forEach((node) => node.addEventListener('click', async () => { const name = prompt('New project name'); if (!name) return; await apiFetch(`/api/projects/${encodeURIComponent(node.dataset.projectId)}`, { method: 'PUT', body: JSON.stringify({ name }) }); render(); }));
+      document.querySelectorAll('.project-duplicate').forEach((node) => node.addEventListener('click', async () => { await apiFetch(`/api/projects/${encodeURIComponent(node.dataset.projectId)}/duplicate`, { method: 'POST' }); toast('Project duplicated'); render(); }));
+      document.querySelectorAll('.project-delete').forEach((node) => node.addEventListener('click', async () => { if (!confirm('Delete this project?')) return; await deleteProject(node.dataset.projectId); render(); }));
     }
 
     // ---------- Editor (scratchpad) ----------
@@ -12826,53 +12834,83 @@
             return [seen[complement], i]
         seen[n] = i
 `;
-    let editorState = { code: EDITOR_DEFAULT, language: "python", tab: "explain", level: "beginner", hintLevel: 1, loading: false, result: null, error: "" };
+    let editorState = { code: EDITOR_DEFAULT, language: "python", tab: "explain", level: "beginner", hintLevel: 1, loading: false, result: null, error: "", project: null, files: [{ path: "main.py", language: "python", content: EDITOR_DEFAULT }], activePath: "main.py", saveStatus: "Saved", saveTimer: null };
+    let monacoEditor = null;
+    let monacoLoader = null;
 
-    function renderEditor(app) {
-      const s = editorState;
+    async function getProjects() { const data = await apiFetch("/api/projects"); return data.projects || []; }
+    async function createProject(name) { const data = await apiFetch("/api/projects", { method: "POST", body: JSON.stringify({ name, files: [{ path: "main.py", language: "python", content: EDITOR_DEFAULT }] }) }); return data.project; }
+    async function loadProject(id) { const data = await apiFetch(`/api/projects/${encodeURIComponent(id)}`); return data.project; }
+    async function deleteProject(id) { await apiFetch(`/api/projects/${encodeURIComponent(id)}`, { method: "DELETE" }); }
+    function activeFile() { return editorState.files.find(f => f.path === editorState.activePath) || editorState.files[0]; }
+    function syncEditorCode() {
+      const file = activeFile();
+      if (monacoEditor) editorState.code = monacoEditor.getValue();
+      const target = editorState.files.find(f => f.path === editorState.activePath);
+      if (target) { target.content = editorState.code; target.language = editorState.language; target.updatedAt = new Date().toISOString(); }
+    }
+    function queueProjectSave() {
+      if (!editorState.project) return;
+      syncEditorCode();
+      editorState.saveStatus = "Saving…";
+      const status = document.getElementById("project-save-status"); if (status) status.textContent = editorState.saveStatus;
+      clearTimeout(editorState.saveTimer);
+      editorState.saveTimer = setTimeout(async () => {
+        try { await apiFetch(`/api/projects/${encodeURIComponent(editorState.project.id)}`, { method: "PUT", body: JSON.stringify({ files: editorState.files }) }); editorState.saveStatus = "Saved"; }
+        catch (err) { editorState.saveStatus = "Save failed"; toast(err.message || "Could not save project", true); }
+        const node = document.getElementById("project-save-status"); if (node) node.textContent = editorState.saveStatus;
+      }, 700);
+    }
+    function loadMonaco() {
+      if (window.monaco) return Promise.resolve(window.monaco);
+      if (monacoLoader) return monacoLoader;
+      monacoLoader = new Promise((resolve, reject) => {
+        if (!document.getElementById("monaco-loader")) {
+          const script = document.createElement("script"); script.id = "monaco-loader"; script.src = "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/loader.min.js"; script.onload = () => { window.require.config({ paths: { vs: "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs" } }); window.require(["vs/editor/editor.main"], () => resolve(window.monaco), reject); }; script.onerror = reject; document.head.appendChild(script);
+        } else reject(new Error("Monaco loader unavailable"));
+      });
+      return monacoLoader;
+    }
+    async function mountMonaco() {
+      const host = document.getElementById("monaco-host"); if (!host) return;
+      try {
+        const monaco = await loadMonaco();
+        if (!document.getElementById("monaco-host")) return;
+        if (monacoEditor) { monacoEditor.dispose(); monacoEditor = null; }
+        const lang = ({ python: "python", javascript: "javascript", java: "java", cpp: "cpp" })[editorState.language] || "plaintext";
+        monacoEditor = monaco.editor.create(host, { value: editorState.code, language: lang, theme: "vs-dark", automaticLayout: true, minimap: { enabled: false }, fontSize: 14, tabSize: 4, wordWrap: "on", padding: { top: 14, bottom: 14 } });
+        monacoEditor.onDidChangeModelContent(() => { editorState.code = monacoEditor.getValue(); queueProjectSave(); });
+        const fallback = document.getElementById("ed-code"); if (fallback) fallback.style.display = "none";
+      } catch (_) { /* textarea remains a resilient offline fallback */ }
+    }
+    async function ensureEditorProject() {
+      if (editorState.project || !CURRENT_USER || !AUTH_TOKEN) return;
+      try {
+        const projects = await getProjects();
+        const project = projects[0] || await createProject("My first project");
+        const full = await loadProject(project.id);
+        editorState.project = full; editorState.files = full.files?.length ? full.files : [{ path: "main.py", language: "python", content: EDITOR_DEFAULT }]; editorState.activePath = editorState.files[0].path; editorState.language = editorState.files[0].language; editorState.code = editorState.files[0].content || "";
+      } catch (err) { editorState.error = `Workspace unavailable: ${err.message}`; }
+    }
+
+    async function renderEditor(app) {
+      await ensureEditorProject();
+      const s = editorState; const file = activeFile();
       app.innerHTML = `
   <div class="page container" style="max-width:1200px;">
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
-      <h1 style="margin:0;">Editor</h1>
-      <select id="ed-language">
-        ${["python", "javascript", "java", "cpp"].map(l => `<option value="${l}" ${l === s.language ? "selected" : ""}>${({ python: "Python", javascript: "JavaScript", java: "Java", cpp: "C++" })[l]}</option>`).join("")}
-      </select>
-    </div>
-    <div class="editor-grid">
-      <div class="card editor-wrap">
-        <div class="editor-toolbar"><span class="muted mono" style="font-size:.75rem;">scratchpad.${({ python: "py", javascript: "js", java: "java", cpp: "cpp" })[s.language] || "txt"}</span></div>
-        <textarea class="code-input" id="ed-code" spellcheck="false">${escapeHtml(s.code)}</textarea>
-      </div>
-      <div class="card mentor-panel">
-        <div class="tab-row">
-          ${["explain", "bugfinder", "hint"].map(t => `<button class="tab-btn ${s.tab === t ? "active" : ""}" data-tab="${t}">${t === "explain" ? "Explain" : t === "bugfinder" ? "Find bug" : "Hint"}</button>`).join("")}
-        </div>
-        ${s.tab === "explain" ? `
-          <select id="ed-level" style="align-self:flex-start; margin-bottom:1rem;">
-            ${["beginner", "intermediate", "advanced"].map(l => `<option value="${l}" ${l === s.level ? "selected" : ""}>${l[0].toUpperCase() + l.slice(1)}</option>`).join("")}
-          </select>` : ""}
-        ${s.tab === "hint" ? `
-          <select id="ed-hint-level" style="align-self:flex-start; margin-bottom:1rem;">
-            <option value="1" ${s.hintLevel === 1 ? "selected" : ""}>Level 1 — nudge</option>
-            <option value="2" ${s.hintLevel === 2 ? "selected" : ""}>Level 2 — strategy</option>
-            <option value="3" ${s.hintLevel === 3 ? "selected" : ""}>Level 3 — near-solution</option>
-          </select>` : ""}
-        <button class="btn btn-primary" id="ed-run" style="align-self:flex-start; margin-bottom:1rem;" ${s.loading ? "disabled" : ""}>
-          ${s.loading ? `<span class="spinner"></span>Thinking…` : `Ask mentor to ${s.tab === "bugfinder" ? "find bugs" : s.tab}`}
-        </button>
-        <div class="mentor-body" id="ed-result">${renderEditorResult()}</div>
-      </div>
-    </div>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:1rem;"><div><p class="eyebrow mono">PERSISTENT WORKSPACE</p><h1 style="margin:0;">${escapeHtml(s.project?.name || "Editor")}</h1></div><div style="display:flex;gap:.6rem;align-items:center;"><span id="project-save-status" class="muted mono" style="font-size:.75rem;">${s.saveStatus}</span><button class="btn btn-ghost" id="new-file">+ File</button><button class="btn btn-ghost" id="new-project">New project</button><select id="ed-language">${["python", "javascript", "java", "cpp"].map(l => `<option value="${l}" ${l === s.language ? "selected" : ""}>${({ python: "Python", javascript: "JavaScript", java: "Java", cpp: "C++" })[l]}</option>`).join("")}</select></div></div>
+    <div class="card" style="display:flex;gap:.35rem;overflow:auto;padding:.55rem .7rem;margin-bottom:1rem;">${s.files.map(f => `<button class="tab-btn ${f.path === s.activePath ? "active" : ""}" data-file="${escapeHtml(f.path)}">${escapeHtml(f.path)}</button>`).join("")}</div>
+    <div class="editor-grid"><div class="card editor-wrap"><div class="editor-toolbar"><span class="muted mono" style="font-size:.75rem;">${escapeHtml(file?.path || "main.py")}</span><span class="muted" style="font-size:.75rem;">Monaco editor · Ctrl/Cmd+S saves automatically</span></div><div id="monaco-host" style="height:430px;width:100%;border-radius:0 0 12px 12px;overflow:hidden;"></div><textarea class="code-input" id="ed-code" spellcheck="false">${escapeHtml(s.code)}</textarea></div>
+      <div class="card mentor-panel"><div class="tab-row">${["explain", "bugfinder", "hint"].map(t => `<button class="tab-btn ${s.tab === t ? "active" : ""}" data-tab="${t}">${t === "explain" ? "Explain" : t === "bugfinder" ? "Find bug" : "Hint"}</button>`).join("")}</div>${s.tab === "explain" ? `<select id="ed-level" style="align-self:flex-start;margin-bottom:1rem;">${["beginner", "intermediate", "advanced"].map(l => `<option value="${l}" ${l === s.level ? "selected" : ""}>${l[0].toUpperCase() + l.slice(1)}</option>`).join("")}</select>` : ""}${s.tab === "hint" ? `<select id="ed-hint-level" style="align-self:flex-start;margin-bottom:1rem;"><option value="1" ${s.hintLevel === 1 ? "selected" : ""}>Level 1 — nudge</option><option value="2" ${s.hintLevel === 2 ? "selected" : ""}>Level 2 — strategy</option><option value="3" ${s.hintLevel === 3 ? "selected" : ""}>Level 3 — near-solution</option></select>` : ""}<button class="btn btn-primary" id="ed-run" style="align-self:flex-start;margin-bottom:1rem;" ${s.loading ? "disabled" : ""}>${s.loading ? `<span class="spinner"></span>Thinking…` : `Ask mentor to ${s.tab === "bugfinder" ? "find bugs" : s.tab}`}</button><div class="mentor-body" id="ed-result">${renderEditorResult()}</div></div></div>
   </div>`;
-
-      document.getElementById("ed-code").addEventListener("input", e => { editorState.code = e.target.value; });
-      document.getElementById("ed-language").addEventListener("change", e => { editorState.language = e.target.value; renderEditor(app); });
-      document.querySelectorAll(".tab-btn").forEach(b => b.addEventListener("click", () => {
-        editorState.tab = b.dataset.tab; editorState.result = null; editorState.error = ""; renderEditor(app);
-      }));
-      const lv = document.getElementById("ed-level"); if (lv) lv.addEventListener("change", e => editorState.level = e.target.value);
-      const hl = document.getElementById("ed-hint-level"); if (hl) hl.addEventListener("change", e => editorState.hintLevel = parseInt(e.target.value, 10));
-      document.getElementById("ed-run").addEventListener("click", () => runEditorAction(app));
+      const fallback = document.getElementById("ed-code"); fallback.addEventListener("input", e => { editorState.code = e.target.value; queueProjectSave(); });
+      document.getElementById("ed-language").addEventListener("change", e => { syncEditorCode(); editorState.language = e.target.value; activeFile().language = e.target.value; renderEditor(app); });
+      document.querySelectorAll("[data-file]").forEach(b => b.addEventListener("click", () => { syncEditorCode(); editorState.activePath = b.dataset.file; const next = activeFile(); editorState.code = next.content || ""; editorState.language = next.language || "text"; renderEditor(app); }));
+      document.getElementById("new-file").addEventListener("click", () => { const path = prompt("File path", "utils.py"); if (!path || s.files.some(f => f.path === path)) return; s.files.push({ path, language: path.endsWith(".js") ? "javascript" : path.endsWith(".java") ? "java" : path.endsWith(".cpp") ? "cpp" : "python", content: "" }); s.activePath = path; s.code = ""; queueProjectSave(); renderEditor(app); });
+      document.getElementById("new-project").addEventListener("click", async () => { const name = prompt("Project name", "New project"); if (!name) return; const project = await createProject(name); editorState.project = project; editorState.files = project.files; editorState.activePath = project.files[0].path; editorState.code = project.files[0].content || ""; renderEditor(app); });
+      document.querySelectorAll(".tab-btn[data-tab]").forEach(b => b.addEventListener("click", () => { editorState.tab = b.dataset.tab; editorState.result = null; editorState.error = ""; renderEditor(app); }));
+      const lv = document.getElementById("ed-level"); if (lv) lv.addEventListener("change", e => editorState.level = e.target.value); const hl = document.getElementById("ed-hint-level"); if (hl) hl.addEventListener("change", e => editorState.hintLevel = parseInt(e.target.value, 10)); document.getElementById("ed-run").addEventListener("click", () => runEditorAction(app));
+      mountMonaco();
     }
 
     function renderEditorResult() {

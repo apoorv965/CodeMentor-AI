@@ -2275,14 +2275,20 @@
     async function storeGet(key, shared = false) {
       try {
         const r = await window.storage.get(key, shared);
-        return r ? JSON.parse(r.value) : null;
+        if (r) return JSON.parse(r.value);
+        try { const value = window.localStorage.getItem(key); return value === null ? null : JSON.parse(value); } catch (_) { return null; }
       } catch (e) {
+        try {
+          const value = window.localStorage.getItem(key);
+          if (value !== null) { memCache[key] = JSON.parse(value); return memCache[key]; }
+        } catch (_) { /* private browsing or blocked storage */ }
         return memCache[key] !== undefined ? memCache[key] : null;
       }
     }
     async function storeSet(key, value, shared = false) {
       memCache[key] = value;
-      try { await window.storage.set(key, JSON.stringify(value), shared); } catch (e) { /* in-memory only */ }
+      try { await window.storage.set(key, JSON.stringify(value), shared); } catch (e) { /* localStorage below remains the durable fallback */ }
+      try { window.localStorage.setItem(key, JSON.stringify(value)); } catch (_) { /* in-memory only */ }
     }
     async function getSession() {
       return await storeGet("codementor_session");

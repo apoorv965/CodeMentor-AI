@@ -2273,10 +2273,10 @@
     // ---------- tiny in-memory fallback store ----------
     const memCache = {};
     async function storeGet(key, shared = false) {
+      try { const value = window.localStorage.getItem(key); if (value !== null) return JSON.parse(value); } catch (_) { /* continue with platform storage */ }
       try {
         const r = await window.storage.get(key, shared);
-        if (r) return JSON.parse(r.value);
-        try { const value = window.localStorage.getItem(key); return value === null ? null : JSON.parse(value); } catch (_) { return null; }
+        return r ? JSON.parse(r.value) : null;
       } catch (e) {
         try {
           const value = window.localStorage.getItem(key);
@@ -2287,8 +2287,8 @@
     }
     async function storeSet(key, value, shared = false) {
       memCache[key] = value;
+      try { window.localStorage.setItem(key, JSON.stringify(value)); } catch (_) { /* storage may be blocked */ }
       try { await window.storage.set(key, JSON.stringify(value), shared); } catch (e) { /* localStorage below remains the durable fallback */ }
-      try { window.localStorage.setItem(key, JSON.stringify(value)); } catch (_) { /* in-memory only */ }
     }
     async function getSession() {
       return await storeGet("codementor_session");
@@ -12261,13 +12261,14 @@
         // Backend-authenticated session (email/password) — verify the token
         // is still valid and pull fresh user data from the backend.
         AUTH_TOKEN = session.token;
+        if (session.user) CURRENT_USER = session.user;
         try {
           const data = await apiFetch("/api/auth/profile");
           CURRENT_USER = { id: data.user.id, username: data.user.name, email: data.user.email, role: data.user.role, status: data.user.status, provider: "backend", createdAt: data.user.createdAt };
         } catch (err) {
-          // Token expired/invalid — clear the stale session.
-          AUTH_TOKEN = null;
-          await setSession(null);
+          // Keep the cached identity during a transient Render wake-up/network error.
+          // A fresh API request will revalidate the token once the service is ready.
+          if (!CURRENT_USER) { AUTH_TOKEN = null; await setSession(null); }
         }
       } else if (session && session.userId) {
         // Local session (Google sign-in — the backend doesn't support Google
@@ -12749,8 +12750,8 @@
         }
 
         AUTH_TOKEN = data.token;
-        await setSession({ token: data.token });
-        CURRENT_USER = { id: data.user.id, username: data.user.name, email: data.user.email, provider: "backend", createdAt: data.user.createdAt };
+        CURRENT_USER = { id: data.user.id, username: data.user.name, email: data.user.email, role: data.user.role, status: data.user.status, provider: "backend", createdAt: data.user.createdAt };
+        await setSession({ token: data.token, user: CURRENT_USER });
         toast(mode === "signup" ? `Welcome, ${CURRENT_USER.username}!` : `Welcome back, ${CURRENT_USER.username}!`);
         go("dashboard");
       } catch (err) {

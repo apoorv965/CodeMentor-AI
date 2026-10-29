@@ -13238,6 +13238,7 @@
     // + testcase / result console (bottom), with draggable splitters.
     // ============================================================
     let problemState = {};
+    let problemMonacoEditor = null;
 
     function ensureProblemState(problem) {
       if (!problemState[problem.id]) {
@@ -13265,6 +13266,7 @@
     }
 
     async function renderProblemDetail(app, id) {
+      if (problemMonacoEditor) { problemMonacoEditor.dispose(); problemMonacoEditor = null; }
       // The list endpoint only carries lightweight metadata (used for the
       // "3 of 956" numbering below) — full description/starter/examples
       // come from the detail endpoint, which also includes this user's
@@ -13312,7 +13314,7 @@
             <span class="muted mono" style="font-size:.75rem;">${problem.fnName}.py</span>
             <span class="muted mono" style="font-size:.72rem;">Python3</span>
           </div>
-          <textarea class="lc-code-input" id="pd-code" spellcheck="false">${escapeHtml(s.code)}</textarea>
+          <div id="pd-monaco-host" style="height:100%;width:100%;min-height:320px;"></div><textarea class="lc-code-input" id="pd-code" spellcheck="false">${escapeHtml(s.code)}</textarea>
         </div>
         <div class="lc-splitter-h" id="lc-splitter-h"></div>
         <div class="card lc-pane" id="lc-console-pane" style="flex:1;">
@@ -13327,6 +13329,7 @@
   </div>`;
 
       document.getElementById("pd-code").addEventListener("input", e => { s.code = e.target.value; });
+      mountProblemMonaco(s);
       document.getElementById("pd-hint-level").addEventListener("change", e => { s.hintLevel = parseInt(e.target.value, 10); });
       document.getElementById("pd-run").addEventListener("click", () => runProblemCode(app, problem, s, false));
       document.getElementById("pd-submit").addEventListener("click", () => runProblemCode(app, problem, s, true));
@@ -13347,6 +13350,18 @@
         s.editorHeight = pct;
         document.getElementById("lc-editor-pane").style.flexBasis = pct + "%";
       });
+    }
+
+    async function mountProblemMonaco(state) {
+      const host = document.getElementById("pd-monaco-host"); if (!host) return;
+      try {
+        const monaco = await loadMonaco();
+        if (!document.getElementById("pd-monaco-host")) return;
+        if (problemMonacoEditor) { problemMonacoEditor.dispose(); problemMonacoEditor = null; }
+        problemMonacoEditor = monaco.editor.create(host, { value: state.code || "", language: "python", theme: "vs-dark", automaticLayout: true, minimap: { enabled: false }, fontSize: 14, tabSize: 4, insertSpaces: true, wordWrap: "on", padding: { top: 14, bottom: 14 } });
+        problemMonacoEditor.onDidChangeModelContent(() => { state.code = problemMonacoEditor.getValue(); });
+        const fallback = document.getElementById("pd-code"); if (fallback) fallback.style.display = "none";
+      } catch (_) { /* offline fallback textarea remains functional */ }
     }
 
     function renderProblemDescription(problem) {

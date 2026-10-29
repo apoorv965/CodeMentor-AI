@@ -13300,7 +13300,7 @@
         </select>
         <button class="lc-btn" id="pd-hint" ${s.hintLoading ? "disabled" : ""}>${s.hintLoading ? "Thinking…" : "💡 Hint"}</button>
         <button class="lc-btn" id="pd-run" ${s.running ? "disabled" : ""}>${s.running ? `<span class="spinner"></span>` : "▶"} Run</button>
-        <button class="lc-btn submit" id="pd-submit" ${s.running ? "disabled" : ""}>Submit</button>
+        ${problem.hasJudge === false ? '<span class="muted mono" style="font-size:.72rem;">CUSTOM TEST ONLY</span>' : `<button class="lc-btn submit" id="pd-submit" ${s.running ? "disabled" : ""}>Submit</button>`}
       </div>
     </div>
     <div class="lc-body" id="lc-body">
@@ -13340,7 +13340,8 @@
       if (customRun) customRun.addEventListener("click", () => runCustomProblem(app, problem, s));
       document.getElementById("pd-hint-level").addEventListener("change", e => { s.hintLevel = parseInt(e.target.value, 10); });
       document.getElementById("pd-run").addEventListener("click", () => runProblemCode(app, problem, s, false));
-      document.getElementById("pd-submit").addEventListener("click", () => runProblemCode(app, problem, s, true));
+      const submitButton = document.getElementById("pd-submit");
+      if (submitButton) submitButton.addEventListener("click", () => runProblemCode(app, problem, s, true));
       document.getElementById("pd-hint").addEventListener("click", () => getProblemHint(app, problem, s));
       const whyBtn = document.getElementById("pd-why");
       if (whyBtn) whyBtn.addEventListener("click", () => { s.whyOpen = !s.whyOpen; renderProblemDetail(app, id); });
@@ -13435,7 +13436,7 @@
       if (s.running) return `<p class="muted" style="padding:1rem;"><span class="spinner"></span>Running against ${examples.length || problem.hiddenTestCount || ''} test case(s)…</p>`;
       if (!s.results) return `<p class="muted" style="padding:1rem;">Run or Submit to see results here.</p>`;
       if (s.results.status === "No Judge Tests") {
-        return `<p class="lc-result-summary warn">⚠ No judge tests available for this problem yet — it can't be graded.</p>`;
+        return `<p class="muted" style="padding:1rem;">This problem has no official judge cases yet. Use the Custom Testcase box to run your function with your own input.</p>`;
       }
       const accepted = s.results.status === "Accepted";
       const cases = s.results.cases || [];

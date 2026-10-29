@@ -1,5 +1,5 @@
 const local = require('../services/localStore');
-const { judgeSubmission } = require('../services/judgeService');
+const { judgeSubmission, runCustomCase } = require('../services/judgeService');
 const userId = (user) => String(user?._id || user?.id || '');
 
 async function listProblems(req, res) {
@@ -32,6 +32,12 @@ async function submitSolution(req, res, next) {
     const code = String(req.body.code || '');
     if (!code.trim()) return res.status(400).json({ success: false, message: 'Code is required' });
     const language = req.body.language || 'python';
+    if (req.body.mode === 'custom') {
+      const input = String(req.body.customInput || '');
+      if (input.length > 5000) return res.status(400).json({ success: false, message: 'Custom input must be at most 5000 characters.' });
+      const customResult = await runCustomCase({ problem, code, language, input });
+      return res.json({ success: true, mode: 'custom', ...customResult });
+    }
     // Practice metadata describes callable solutions (fnName + paramTypes).
     // The shared judge appends a secure test harness, parses each input line,
     // invokes the function, and normalizes list output before comparing it.

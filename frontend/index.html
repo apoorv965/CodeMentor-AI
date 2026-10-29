@@ -2139,6 +2139,8 @@
     #monaco-host{background:#0f1723}.code-input{min-height:430px}
 
     .admin-table-wrap{overflow:auto}.admin-table{width:100%;border-collapse:collapse;min-width:760px}.admin-table th,.admin-table td{padding:.8rem .6rem;border-bottom:1px solid var(--line);text-align:left;font-size:.8rem}.admin-table th{color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.08em}.admin-table td strong,.admin-table td small{display:block}.admin-table td small{color:var(--muted);margin-top:.2rem}.admin-table .text-link{background:none;border:0;cursor:pointer;font:inherit;color:var(--signal);margin-right:.65rem}.admin-table .admin-delete{color:#ff8c8c}
+
+    .custom-test-panel{margin:1rem;padding:1rem;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.025)}.custom-test-input{display:block;width:100%;min-height:72px;margin:.5rem 0 .65rem;resize:vertical;font-family:var(--mono,monospace);font-size:.8rem;background:#0f1723;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:.65rem}.custom-test-output pre{white-space:pre-wrap;word-break:break-word;background:#0b111b;border-radius:8px;padding:.65rem;margin:.4rem 0 0;color:var(--text)}
 </style>
 </head>
 
@@ -13258,6 +13260,8 @@
           leftTab: "description",
           consoleTab: "testcase",
           activeCase: 0,
+          customInput: "",
+          customResult: null,
           leftWidth: 42,     // % of lc-body width
           editorHeight: 60,  // % of lc-right height
         };
@@ -13330,6 +13334,10 @@
 
       document.getElementById("pd-code").addEventListener("input", e => { s.code = e.target.value; });
       mountProblemMonaco(s);
+      const customInput = document.getElementById("pd-custom-input");
+      if (customInput) customInput.addEventListener("input", e => { s.customInput = e.target.value; });
+      const customRun = document.getElementById("pd-custom-run");
+      if (customRun) customRun.addEventListener("click", () => runCustomProblem(app, problem, s));
       document.getElementById("pd-hint-level").addEventListener("change", e => { s.hintLevel = parseInt(e.target.value, 10); });
       document.getElementById("pd-run").addEventListener("click", () => runProblemCode(app, problem, s, false));
       document.getElementById("pd-submit").addEventListener("click", () => runProblemCode(app, problem, s, true));
@@ -13362,6 +13370,14 @@
         problemMonacoEditor.onDidChangeModelContent(() => { state.code = problemMonacoEditor.getValue(); });
         const fallback = document.getElementById("pd-code"); if (fallback) fallback.style.display = "none";
       } catch (_) { /* offline fallback textarea remains functional */ }
+    }
+
+    async function runCustomProblem(app, problem, state) {
+      state.customResult = { loading: true }; renderProblemDetail(app, problem.id);
+      try {
+        state.customResult = await apiFetch(`/api/problems/${encodeURIComponent(problem.id)}/submit`, { method: "POST", body: JSON.stringify({ code: state.code, language: "python", mode: "custom", customInput: state.customInput || "" }) });
+      } catch (err) { state.customResult = { error: err.message || "Custom test failed" }; }
+      renderProblemDetail(app, problem.id);
     }
 
     function renderProblemDescription(problem) {
@@ -13401,18 +13417,15 @@
     function renderConsoleBody(problem, s) {
       const examples = problem.examples || [];
       if (s.consoleTab === "testcase") {
-        if (!examples.length) {
-          return `<p class="muted" style="padding:1rem;">This problem doesn't have example test cases yet.</p>`;
-        }
-        const t = examples[s.activeCase] || examples[0];
+        const t = examples[s.activeCase] || examples[0] || { input: '' };
         return `
-      <div class="lc-case-row">
+      ${examples.length ? `<div class="lc-case-row">
         ${examples.map((_, i) => `<button class="lc-case-btn ${s.activeCase === i ? 'active' : ''}" data-case="${i}">Case ${i + 1}</button>`).join("")}
-      </div>
-      <div class="lc-case-body">
+      </div><div class="lc-case-body">
         <div class="lc-case-label">Input</div>
         <div class="lc-case-value">${escapeHtml(t.input)}</div>
-      </div>
+      </div>` : `<p class="muted" style="padding:1rem 1rem .3rem;">No official examples are available yet. Try your own input below.</p>`}
+      <div class="custom-test-panel"><div class="lc-case-label">Custom Testcase</div><textarea id="pd-custom-input" class="custom-test-input" placeholder="One argument per line, e.g. 5">${escapeHtml(s.customInput || '')}</textarea><button class="lc-btn" id="pd-custom-run">${s.customResult?.loading ? 'Running…' : 'Run custom input'}</button>${s.customResult && !s.customResult.loading ? `<div class="custom-test-output"><div class="lc-case-label">Output</div><pre>${escapeHtml(s.customResult.error || s.customResult.output || '(no output)')}</pre></div>` : ''}</div>
     `;
       }
       // result tab — s.results is the JSON the backend judge returned:

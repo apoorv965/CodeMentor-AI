@@ -159,11 +159,17 @@ async function judgeSubmission({ problem, code, language, tests }) {
   };
 }
 
-// Strip anything that looks like our internal harness plumbing so a
-// runtime traceback never confuses the user with `__parse_int` etc.
+async function runCustomCase({ problem, code, language, input }) {
+  if (!SUPPORTED_JUDGE_LANGUAGES.includes(language)) return { success: false, status: 'Compilation Error', output: '', error: 'Custom tests currently support Python only.' };
+  const harness = buildHarness(problem, { input: String(input || ''), expected: '' });
+  const result = await executeCode(language, `${code}\n${harness}`, '');
+  return { success: result.success, status: result.success ? 'Executed' : (result.stage === 'compile' ? 'Compilation Error' : 'Runtime Error'), output: String(result.output || '').trim(), error: result.success ? null : sanitizeError(result.error), executionTime: result.executionTime };
+}
+
+// Strip anything that looks like our internal harness plumbing so a runtime traceback never confuses the user with `__parse_int` etc.
 function sanitizeError(message) {
   if (!message) return null;
   return String(message).slice(0, 2000);
 }
 
-module.exports = { judgeSubmission, buildHarness, SUPPORTED_JUDGE_LANGUAGES };
+module.exports = { judgeSubmission, runCustomCase, buildHarness, SUPPORTED_JUDGE_LANGUAGES };

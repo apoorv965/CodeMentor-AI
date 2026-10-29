@@ -1,7 +1,7 @@
 const Problem = require('../models/Problem');
 const Submission = require('../models/Submission');
 const ProblemProgress = require('../models/ProblemProgress');
-const { judgeSubmission, SUPPORTED_JUDGE_LANGUAGES } = require('../services/judgeService');
+const { judgeSubmission, runCustomCase, SUPPORTED_JUDGE_LANGUAGES } = require('../services/judgeService');
 
 const MAX_CODE_LENGTH = parseInt(process.env.MAX_CODE_LENGTH || '20000', 10);
 // The dashboard and practice list need the full catalog (956 problems) to
@@ -137,10 +137,11 @@ const getMyProgress = async (req, res, next) => {
 //                    result, computed from the backend's own test run, does.
 const submitSolution = async (req, res, next) => {
   try {
-    const { code, language, mode } = req.body;
+    const { code, language, mode, customInput } = req.body;
+    const customMode = mode === 'custom';
     const runMode = mode === 'run' ? 'run' : 'submit';
 
-    if (runMode === 'submit' && !req.user) {
+    if (runMode === 'submit' && !customMode && !req.user) {
       return res.status(401).json({ success: false, message: 'Sign in with an email/password account to submit hidden tests.' });
     }
 
@@ -166,6 +167,11 @@ const submitSolution = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Problem not found' });
     }
 
+    if (customMode) {
+      if (typeof customInput !== 'string' || customInput.length > 5000) return res.status(400).json({ success: false, message: 'Custom input is required and must be at most 5000 characters.' });
+      const customResult = await runCustomCase({ problem, code, language: lang, input: customInput });
+      return res.status(200).json({ success: true, mode: 'custom', ...customResult });
+    }
     const tests = runMode === 'submit' ? problem.hiddenTests : problem.publicTests;
     const result = await judgeSubmission({ problem, code, language: lang, tests });
 

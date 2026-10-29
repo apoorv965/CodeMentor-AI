@@ -89,7 +89,7 @@ async function main() {
       fnName: p.fnName,
       paramTypes: Array.isArray(p.paramTypes) ? p.paramTypes : [],
       returnType: p.returnType,
-      publicTests: validTests.length > 0 ? [validTests[0]] : [],
+      publicTests: validTests,
       hiddenTests: validTests, // full set used for grading; select:false in schema
       hasJudge,
       needsManualTests: !hasJudge,

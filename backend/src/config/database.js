@@ -6,7 +6,7 @@ const Problem = require('../models/Problem');
 async function ensureProblemCatalog() {
   if (process.env.AUTO_SEED_PROBLEMS === 'false') return;
   const count = await Problem.estimatedDocumentCount();
-  const needsSeed = count === 0 || await Problem.exists({ 'publicTests.1': { $exists: false }, sourceTestCount: { $gt: 1 } });
+  const needsSeed = count === 0 || process.env.SEED_PROBLEMS_ON_BOOT !== 'false';
   if (!needsSeed) { console.log(`[DB] Problem catalog ready: ${count} problems.`); return; }
   const sourcePath = path.join(__dirname, '..', 'seed', 'problems.raw.json');
   const raw = JSON.parse(fs.readFileSync(sourcePath, 'utf8'));
